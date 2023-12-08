@@ -1,0 +1,125 @@
+from ultralytics import YOLO
+
+# Load the model.
+model = YOLO('yolov8n.pt')
+#model = YOLO('yolov8m.pt')
+
+# Training.
+results = model.train(
+   data='data.yaml',
+   imgsz=640,
+   epochs=10,
+   batch=8,
+   name='yolov8n_custom')
+
+
+
+
+from PIL import Image
+from ultralytics import YOLO
+model = YOLO('/content/runs/detect/yolov8n_custom/weights/best.pt')
+# Run batched inference on a list of images
+results = model(['/content/test/images/20210729_182507_jpg.rf.8d7072583cdf86c78a6fc1637c44a588.jpg','/content/test/images/20210729_182507_jpg.rf.8d7072583cdf86c78a6fc1637c44a588.jpg',
+                 '/content/test/images/20210729_182507_jpg.rf.8d7072583cdf86c78a6fc1637c44a588.jpg', '/content/test/images/20210729_182507_jpg.rf.8d7072583cdf86c78a6fc1637c44a588.jpg'])  # return a list of Results objects
+names = model.names
+i = 0
+# Show the results
+for r in results:
+  print(r.boxes.conf.item())
+  c = r.boxes.cls
+  print(names[int(c)])
+  im_array = r.plot()  # plot a BGR numpy array of predictions
+  im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
+  im.show()  # show image
+  im.save('results.jpg')  # save image
+  if names[int(c)] == 'pill':
+    i += 1
+if i == 4:
+  print('Not brak')
+else:
+  print('brak')
+
+
+
+
+from flask import Flask, request, jsonify
+import os
+
+app = Flask(__name__)
+model = YOLO('/content/runs/detect/yolov8n_custom4/weights/best.pt')
+
+
+@app.route('/process_photos', methods=['POST'])
+def process_photos():
+  files = request.files.getlist('photos')
+
+  for i, file in enumerate(files):
+    file.save(os.path.join('uploads', f'photo_{i}.jpg'))
+
+  results = model(files)  # return a list of Results objects
+  names = model.names
+  i = 0
+  # Show the results
+  for r in results:
+    for c in r.boxes.cls:
+      print(names[int(c)])
+      im_array = r.plot()  # plot a BGR numpy array of predictions
+      im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
+      if names[int(c)] == 'pill':
+        i += 1
+  if i == 4:
+    result = 1
+    return jsonify({'result': result})
+  else:
+    result = 0
+    return jsonify({'result': result})
+
+
+
+  return jsonify({'result': result})
+
+if __name__ == '__main__':
+  if not os.path.exists('uploads'):
+    os.mkdir('uploads')
+  app.run(debug=True)
+
+
+
+
+import requests
+
+url = 'http://127.0.0.1:5000/process_photos'
+files = {
+    'photo0': open('/content/1.jpg', 'rb'),
+    'photo1': open('/content/2.jpg', 'rb'),
+    'photo2': open('/content/3.jpg', 'rb'),
+    'photo3': open('/content/4.jpg', 'rb')
+}
+
+response = requests.post(url, files=files)
+print(response.json())
+
+
+
+
+
+
+import cv2
+import time
+cap = cv2.VideoCapture('/content/sample-5s.mp4')
+
+# Check if the webcam is opened correctly
+# if not cap.isOpened():
+# 	raise IOError("Cannot open webcam")
+i = 0
+while i != 4:
+  ret, frame = cap.read()
+  # уменьшить в 2 раза
+  frame = cv2.resize(frame, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+  cv2.imwrite(f"screen{i}.jpg", frame)
+  print("Successfully saved")
+  i += 1
+  time.sleep(10)
+
+cap.release()
+cv2.destroyAllWindows()
